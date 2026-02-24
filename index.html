@@ -7,13 +7,13 @@
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyAOCZ7nPegv2Rmf1FlpgZJQUVulwC-FFP8",
-      authDomain: "airconsole-game-1c64b.firebaseapp.com",
-      databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
-      projectId: "airconsole-game-1c64b",
-      storageBucket: "airconsole-game-1c64b.appspot.com",
-      messagingSenderId: "21762881860",
-      appId: "1:21762881860:web:56a881305c3374bdfdbf11"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -24,22 +24,20 @@
 
     set(playerRef, { x: 100, y: 100 });
 
-    document.addEventListener("keydown", (e) => {
+    function move(dx, dy) {
       onValue(playerRef, (snapshot) => {
         let data = snapshot.val();
         if (!data) return;
-
-        if (e.key === "ArrowUp") data.y -= 10;
-        if (e.key === "ArrowDown") data.y += 10;
-        if (e.key === "ArrowLeft") data.x -= 10;
-        if (e.key === "ArrowRight") data.x += 10;
-
+        data.x += dx;
+        data.y += dy;
         set(playerRef, data);
       }, { onlyOnce: true });
-    });
+    }
+
+    window.move = move;
 
     onValue(ref(db, "players"), (snapshot) => {
-      document.body.innerHTML = "";
+      document.getElementById("game").innerHTML = "";
       snapshot.forEach((child) => {
         const player = child.val();
         const div = document.createElement("div");
@@ -49,11 +47,46 @@
         div.style.background = "red";
         div.style.left = player.x + "px";
         div.style.top = player.y + "px";
-        document.body.appendChild(div);
+        document.getElementById("game").appendChild(div);
       });
     });
   </script>
+
+  <style>
+    body { margin:0; background:black; overflow:hidden; }
+    #game { position:relative; width:100vw; height:80vh; }
+    .controls {
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      display:grid;
+      grid-template-columns:60px 60px 60px;
+      gap:10px;
+    }
+    button {
+      width:60px;
+      height:60px;
+      font-size:20px;
+      border:none;
+      border-radius:10px;
+      background:orange;
+    }
+  </style>
 </head>
-<body style="background:black; overflow:hidden;">
+
+<body>
+
+<div id="game"></div>
+
+<div class="controls">
+  <div></div>
+  <button onclick="move(0,-10)">⬆</button>
+  <div></div>
+  <button onclick="move(-10,0)">⬅</button>
+  <button onclick="move(0,10)">⬇</button>
+  <button onclick="move(10,0)">➡</button>
+</div>
+
 </body>
 </html>

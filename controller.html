@@ -48,7 +48,7 @@ var firebaseConfig = {
   apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
   authDomain: "airconsole-game-1c64b.firebaseapp.com",
   databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
-  projectId: "airconsole-game-1c64b",
+  projectId: "airconsole-game-1c64b"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -59,6 +59,18 @@ if(!room){ window.location.href="index.html"; }
 
 document.getElementById("roomCode").innerText="Room Code: "+room;
 
+// ✅ CREATE PLAYER ENTRY
+var playerRef = database.ref("rooms/" + room + "/players").push();
+
+playerRef.set({
+  joined: true,
+  time: Date.now()
+});
+
+// ✅ REMOVE WHEN USER CLOSES PAGE
+playerRef.onDisconnect().remove();
+
+// 🎮 MOVE FUNCTION
 function move(direction){
   database.ref("rooms/"+room+"/move").set(direction);
 }

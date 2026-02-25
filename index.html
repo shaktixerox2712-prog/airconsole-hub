@@ -88,20 +88,19 @@ function generateCode(){
 
 function createRoom(){
   const code=generateCode();
-  document.getElementById("roomCode").innerHTML="Your Room Code: "+code;
   localStorage.setItem("room",code);
+  window.location.href="room.html";
 }
 
 function joinRoom(){
   const code=document.getElementById("joinInput").value.toUpperCase();
   if(code.length===6){
     localStorage.setItem("room",code);
-    document.getElementById("roomCode").innerHTML="Joined Room: "+code;
+    window.location.href="room.html";
   }else{
     alert("Enter valid 6 digit code");
   }
 }
 </script>
-
 </body>
 </html>

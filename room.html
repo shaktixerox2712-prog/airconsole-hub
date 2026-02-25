@@ -35,13 +35,19 @@ button{
 <body>
 
 <h1>Room Connected 🎮</h1>
+
 <p id="roomDisplay"></p>
+
+<p id="playerCount">Players: 1</p>
 
 <button onclick="goBack()">Back to Home</button>
 
 <script>
 const room=localStorage.getItem("room");
 document.getElementById("roomDisplay").innerText="Room Code: "+room;
+
+let players = 1;
+document.getElementById("playerCount").innerText = "Players: " + players;
 
 function goBack(){
   window.location.href="index.html";

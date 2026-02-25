@@ -1,94 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AirConsole Multiplayer</title>
-  <style>
-    body { margin:0; background:black; overflow:hidden; }
-    #game { position:relative; width:100vw; height:80vh; }
-    .player {
-      position:absolute;
-      width:50px;
-      height:50px;
-      background:red;
-    }
-    .controls {
-      position:fixed;
-      bottom:20px;
-      left:50%;
-      transform:translateX(-50%);
-      display:grid;
-      grid-template-columns:60px 60px 60px;
-      gap:10px;
-    }
-    button {
-      width:60px;
-      height:60px;
-      font-size:20px;
-      border:none;
-      border-radius:10px;
-      background:orange;
-    }
-  </style>
+<title>DesiConsole</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.container{
+  text-align:center;
+}
+
+h1{
+  font-size:50px;
+  color:#00f7ff;
+  text-shadow:0 0 20px #00f7ff;
+}
+
+button{
+  padding:15px 30px;
+  margin:15px;
+  font-size:18px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  background:#111;
+  color:#00f7ff;
+  box-shadow:0 0 15px #00f7ff;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#00f7ff;
+  color:black;
+  box-shadow:0 0 25px #00f7ff;
+}
+
+input{
+  padding:12px;
+  font-size:16px;
+  border-radius:8px;
+  border:none;
+  margin-top:10px;
+  text-align:center;
+}
+
+#roomCode{
+  margin-top:20px;
+  font-size:22px;
+  color:#00ff88;
+  text-shadow:0 0 10px #00ff88;
+}
+</style>
 </head>
 
 <body>
 
-<div id="game"></div>
+<div class="container">
+  <h1>DesiConsole</h1>
+  <p>Play Together on TV using Mobile</p>
 
-<div class="controls">
-  <div></div>
-  <button onclick="move(0,-10)">⬆</button>
-  <div></div>
-  <button onclick="move(-10,0)">⬅</button>
-  <button onclick="move(0,10)">⬇</button>
-  <button onclick="move(10,0)">➡</button>
+  <button onclick="createRoom()">Create Room</button>
+  <br>
+  <input id="joinInput" placeholder="Enter Room Code">
+  <br>
+  <button onclick="joinRoom()">Join Room</button>
+
+  <div id="roomCode"></div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<script>
+function generateCode(){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code="";
+  for(let i=0;i<6;i++){
+    code+=chars.charAt(Math.floor(Math.random()*chars.length));
+  }
+  return code;
+}
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAOCZ7nPegv2Rmf1FlpgZJQUVulwC-FFP8",
-  authDomain: "airconsole-game-1c64b.firebaseapp.com",
-  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
-  projectId: "airconsole-game-1c64b",
-  storageBucket: "airconsole-game-1c64b.firebasestorage.app",
-  messagingSenderId: "21762881860",
-  appId: "1:21762881860:web:56a881305c3374bdfdbf11"
-};
+function createRoom(){
+  const code=generateCode();
+  document.getElementById("roomCode").innerHTML="Your Room Code: "+code;
+  localStorage.setItem("room",code);
+}
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const playerId = Math.random().toString(36).substring(7);
-const playerRef = ref(db, "players/" + playerId);
-
-set(playerRef, { x: 100, y: 100 });
-
-window.move = function(dx, dy) {
-  onValue(playerRef, (snapshot) => {
-    let data = snapshot.val();
-    if (!data) return;
-    data.x += dx;
-    data.y += dy;
-    set(playerRef, data);
-  }, { onlyOnce: true });
-};
-
-onValue(ref(db, "players"), (snapshot) => {
-  const game = document.getElementById("game");
-  game.innerHTML = "";
-
-  snapshot.forEach((child) => {
-    const player = child.val();
-    const div = document.createElement("div");
-    div.className = "player";
-    div.style.left = player.x + "px";
-    div.style.top = player.y + "px";
-    game.appendChild(div);
-  });
-});
+function joinRoom(){
+  const code=document.getElementById("joinInput").value.toUpperCase();
+  if(code.length===6){
+    localStorage.setItem("room",code);
+    document.getElementById("roomCode").innerHTML="Joined Room: "+code;
+  }else{
+    alert("Enter valid 6 digit code");
+  }
+}
 </script>
 
 </body>

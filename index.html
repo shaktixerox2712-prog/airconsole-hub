@@ -89,14 +89,14 @@ function generateCode(){
 function createRoom(){
   const code=generateCode();
   localStorage.setItem("room",code);
-  window.location.href="room.html";
+  window.location.href = "./room.html";
 }
 
 function joinRoom(){
   const code=document.getElementById("joinInput").value.toUpperCase();
   if(code.length===6){
     localStorage.setItem("room",code);
-    window.location.href="room.html";
+   window.location.href = "./room.html";
   }else{
     alert("Enter valid 6 digit code");
   }

@@ -53,6 +53,36 @@ function goBack(){
   window.location.href="index.html";
 }
 </script>
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
+  authDomain: "airconsole-game-1c64b.firebaseapp.com",
+  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
+  projectId: "airconsole-game-1c64b",
+  storageBucket: "airconsole-game-1c64b.firebasestorage.app",
+  messagingSenderId: "21762881860",
+  appId: "1:21762881860:web:56a881305c3374bdfdbf11"
+};
+
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+const room = localStorage.getItem("room");
+document.getElementById("roomDisplay").innerText = "Room Code: " + room;
+
+// Add player to room
+var playerRef = database.ref("rooms/" + room + "/players").push();
+playerRef.set(true);
+
+// Listen for player count
+database.ref("rooms/" + room + "/players").on("value", function(snapshot){
+  var count = snapshot.numChildren();
+  document.getElementById("playerCount").innerText = "Players: " + count;
+});
+</script>
 </body>
 </html>

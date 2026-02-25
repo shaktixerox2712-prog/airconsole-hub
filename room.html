@@ -37,21 +37,10 @@ button{
 <h1>Room Connected 🎮</h1>
 
 <p id="roomDisplay"></p>
-
+<p id="playerCount">Players: 0</p>
 
 <button onclick="goBack()">Back to Home</button>
 
-<script>
-const room=localStorage.getItem("room");
-document.getElementById("roomDisplay").innerText="Room Code: "+room;
-
-let players = 1;
-document.getElementById("playerCount").innerText = "Players: " + players;
-
-function goBack(){
-  window.location.href="index.html";
-}
-</script>
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -70,18 +59,32 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-const room = localStorage.getItem("room");
+var room = localStorage.getItem("room");
+
+if(!room){
+  window.location.href="index.html";
+}
+
+// Show room code
 document.getElementById("roomDisplay").innerText = "Room Code: " + room;
 
 // Add player to room
 var playerRef = database.ref("rooms/" + room + "/players").push();
 playerRef.set(true);
 
+// Remove player when user leaves
+playerRef.onDisconnect().remove();
+
 // Listen for player count
 database.ref("rooms/" + room + "/players").on("value", function(snapshot){
   var count = snapshot.numChildren();
   document.getElementById("playerCount").innerText = "Players: " + count;
 });
+
+function goBack(){
+  window.location.href="index.html";
+}
 </script>
+
 </body>
 </html>

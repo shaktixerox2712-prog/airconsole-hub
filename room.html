@@ -15,9 +15,7 @@ body{
   flex-direction:column;
 }
 
-h1{
-  color:#00f7ff;
-}
+h1{ color:#00f7ff; }
 
 button{
   padding:15px 30px;
@@ -35,7 +33,6 @@ button{
 <body>
 
 <h1>Room Connected 🎮</h1>
-
 <p id="roomDisplay"></p>
 <p id="playerCount">Players: 0</p>
 
@@ -65,32 +62,22 @@ if(!room){
   window.location.href="index.html";
 }
 
+// Show room code
 document.getElementById("roomDisplay").innerText = "Room Code: " + room;
 
-var roomRef = database.ref("rooms/" + room);
-
-// Increase player count safely
-roomRef.transaction(function(data){
-  if(data){
-    data.count = (data.count || 0) + 1;
-  }else{
-    data = {count:1};
-  }
-  return data;
+// Create player entry
+var playerRef = database.ref("rooms/" + room + "/players").push();
+playerRef.set({
+  joined: true
 });
 
-// Decrease when user leaves
-roomRef.onDisconnect().transaction(function(data){
-  if(data && data.count){
-    data.count--;
-  }
-  return data;
-});
+// Remove when disconnected
+playerRef.onDisconnect().remove();
 
-// Live listener
-roomRef.on("value", function(snapshot){
-  var data = snapshot.val();
-  var count = data ? data.count : 0;
+// Live player count
+database.ref("rooms/" + room + "/players")
+.on("value", function(snapshot){
+  var count = snapshot.numChildren();
   document.getElementById("playerCount").innerText = "Players: " + count;
 });
 
@@ -98,3 +85,6 @@ function goBack(){
   window.location.href="index.html";
 }
 </script>
+
+</body>
+</html>

@@ -65,19 +65,32 @@ if(!room){
   window.location.href="index.html";
 }
 
-// Show room code
 document.getElementById("roomDisplay").innerText = "Room Code: " + room;
 
-// Add player to room
-var playerRef = database.ref("rooms/" + room + "/players").push();
-playerRef.set(true);
+var roomRef = database.ref("rooms/" + room);
 
-// Remove player when user leaves
-playerRef.onDisconnect().remove();
+// Increase player count safely
+roomRef.transaction(function(data){
+  if(data){
+    data.count = (data.count || 0) + 1;
+  }else{
+    data = {count:1};
+  }
+  return data;
+});
 
-// Listen for player count
-database.ref("rooms/" + room + "/players").on("value", function(snapshot){
-  var count = snapshot.numChildren();
+// Decrease when user leaves
+roomRef.onDisconnect().transaction(function(data){
+  if(data && data.count){
+    data.count--;
+  }
+  return data;
+});
+
+// Live listener
+roomRef.on("value", function(snapshot){
+  var data = snapshot.val();
+  var count = data ? data.count : 0;
   document.getElementById("playerCount").innerText = "Players: " + count;
 });
 
@@ -85,6 +98,3 @@ function goBack(){
   window.location.href="index.html";
 }
 </script>
-
-</body>
-</html>

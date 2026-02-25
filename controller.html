@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DesiConsole Controller</title>
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+
+h1{ color:#00f7ff; }
+
+button{
+  width:120px;
+  height:120px;
+  font-size:20px;
+  margin:20px;
+  border:none;
+  border-radius:20px;
+  background:#00f7ff;
+  color:black;
+}
+
+#controls{
+  margin-top:50px;
+}
+</style>
+</head>
+<body>
+
+<h1>DesiConsole Controller 🎮</h1>
+<p id="roomCode"></p>
+
+<div id="controls">
+  <button onclick="move('left')">LEFT</button>
+  <button onclick="move('right')">RIGHT</button>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
+  authDomain: "airconsole-game-1c64b.firebaseapp.com",
+  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
+  projectId: "airconsole-game-1c64b",
+};
+
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+var room = localStorage.getItem("room");
+if(!room){ window.location.href="index.html"; }
+
+document.getElementById("roomCode").innerText="Room Code: "+room;
+
+function move(direction){
+  database.ref("rooms/"+room+"/move").set(direction);
+}
+</script>
+
+</body>
+</html>

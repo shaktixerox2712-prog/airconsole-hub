@@ -2,6 +2,7 @@
 <html>
 <head>
 <title>DesiConsole Controller</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{
   margin:0;
@@ -11,32 +12,49 @@ body{
   font-family:Arial;
 }
 
-h1{ color:#00f7ff; }
+h1{
+  color:#00f7ff;
+  margin-top:20px;
+}
+
+#roomCode{
+  margin-bottom:20px;
+  font-size:18px;
+  color:#00ff88;
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  margin-top:40px;
+}
 
 button{
-  width:120px;
-  height:120px;
-  font-size:20px;
-  margin:20px;
+  width:100px;
+  height:100px;
+  font-size:18px;
   border:none;
   border-radius:20px;
   background:#00f7ff;
   color:black;
+  font-weight:bold;
 }
 
-#controls{
-  margin-top:50px;
+button:active{
+  background:#0099aa;
 }
 </style>
 </head>
 <body>
 
-<h1>DesiConsole Controller 🎮</h1>
+<h1>DesiConsole 🎮</h1>
 <p id="roomCode"></p>
 
-<div id="controls">
-  <button onclick="move('left')">LEFT</button>
-  <button onclick="move('right')">RIGHT</button>
+<div class="controls">
+  <button id="leftBtn">LEFT</button>
+  <button id="accBtn">ACC</button>
+  <button id="rightBtn">RIGHT</button>
 </div>
 
 <!-- Firebase -->
@@ -44,6 +62,23 @@ button{
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+/* FIREBASE CONFIG */
+var firebaseConfig = {
+  apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
+  authDomain: "airconsole-game-1c64b.firebaseapp.com",
+  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
+  projectId: "airconsole-game-1c64b"
+};
+
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+var room = localStorage.getItem("room");
+if(!room){ window.location.href="index.html"; }
+
+document.getElementById("roomCode").innerText = "Room: " + room;
+
+/* SEND CONTROL */
 function sendControl(left,right,acc){
  database.ref("rooms/"+room+"/control").set({
    left:left,
@@ -52,6 +87,25 @@ function sendControl(left,right,acc){
  });
 }
 
+/* BUTTON EVENTS */
+const leftBtn = document.getElementById("leftBtn");
+const rightBtn = document.getElementById("rightBtn");
+const accBtn = document.getElementById("accBtn");
+
+leftBtn.onmousedown = () => sendControl(true,false,false);
+rightBtn.onmousedown = () => sendControl(false,true,false);
+accBtn.onmousedown = () => sendControl(false,false,true);
+
+leftBtn.onmouseup = rightBtn.onmouseup = accBtn.onmouseup = () => sendControl(false,false,false);
+
+/* TOUCH SUPPORT */
+leftBtn.ontouchstart = () => sendControl(true,false,false);
+rightBtn.ontouchstart = () => sendControl(false,true,false);
+accBtn.ontouchstart = () => sendControl(false,false,true);
+
+leftBtn.ontouchend = rightBtn.ontouchend = accBtn.ontouchend = () => sendControl(false,false,false);
+
+/* KEYBOARD BACKUP */
 document.addEventListener("keydown", function(e){
  if(e.key=="ArrowLeft") sendControl(true,false,false);
  if(e.key=="ArrowRight") sendControl(false,true,false);

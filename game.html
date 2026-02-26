@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>DesiConsole 3D Racing - Level 2</title>
+<title>DesiConsole 3D Racing</title>
 <style>
 body { margin:0; overflow:hidden; background:black; }
-#score {
+#hud {
  position:absolute;
  top:10px;
  left:50%;
  transform:translateX(-50%);
  color:white;
  font-family:Arial;
- font-size:22px;
+ font-size:20px;
 }
 </style>
 </head>
 <body>
 
-<div id="score">Score: 0</div>
+<div id="hud">Lap: 1 | Position: 1</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -35,103 +35,80 @@ var firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
-
 var room = localStorage.getItem("room");
 if(!room){ window.location.href="index.html"; }
 
 /* THREE SETUP */
 let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-scene.background = new THREE.Color(0x000000);
-
+/* LIGHT */
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(0,10,10);
 scene.add(light);
 
-/* ROAD */
-let road = new THREE.Mesh(
-  new THREE.PlaneGeometry(10,500),
-  new THREE.MeshStandardMaterial({color:0x222222})
-);
-road.rotation.x = -Math.PI/2;
-scene.add(road);
+/* TRACK */
+let trackGeometry = new THREE.RingGeometry(15,25,64);
+let trackMaterial = new THREE.MeshStandardMaterial({color:0x333333, side:THREE.DoubleSide});
+let track = new THREE.Mesh(trackGeometry, trackMaterial);
+track.rotation.x = -Math.PI/2;
+scene.add(track);
 
-/* LANE LINES */
-for(let i=-200;i<200;i+=20){
- let line = new THREE.Mesh(
-   new THREE.BoxGeometry(0.1,0.01,5),
-   new THREE.MeshStandardMaterial({color:0xffffff})
- );
- line.position.set(0,0.01,i);
- scene.add(line);
-}
-
-/* CAR */
-let car = new THREE.Mesh(
- new THREE.BoxGeometry(1,0.5,2),
- new THREE.MeshStandardMaterial({color:0xff0000})
-);
+/* PLAYER CAR */
+let carGeo = new THREE.BoxGeometry(1,0.5,2);
+let carMat = new THREE.MeshStandardMaterial({color:0xff0000});
+let car = new THREE.Mesh(carGeo, carMat);
 car.position.y = 0.25;
 scene.add(car);
 
-/* ENEMY */
-let enemy = new THREE.Mesh(
- new THREE.BoxGeometry(1,0.5,2),
- new THREE.MeshStandardMaterial({color:0xffff00})
-);
-enemy.position.y = 0.25;
-enemy.position.z = -50;
-scene.add(enemy);
+let angle = 0;
+let speed = 0;
+let maxSpeed = 0.15;
+let lap = 1;
+let totalLaps = 3;
 
-/* LANES */
-let lanes = [-2, 0, 2];
-let currentLane = 1; // center
-let targetX = lanes[currentLane];
+camera.position.set(0,5,10);
 
-/* SCORE */
-let score = 0;
-let scoreDisplay = document.getElementById("score");
+/* CONTROLLER STATE */
+let moveLeft=false;
+let moveRight=false;
+let accelerate=false;
 
-/* CAMERA */
-camera.position.set(0,4,6);
+/* FIREBASE CONTROLLER LISTEN */
+database.ref("rooms/"+room+"/control").on("value", function(snap){
+ let data = snap.val();
+ if(!data) return;
+
+ moveLeft = data.left || false;
+ moveRight = data.right || false;
+ accelerate = data.acc || false;
+});
 
 /* GAME LOOP */
 function animate(){
  requestAnimationFrame(animate);
 
- // Smooth lane movement
- car.position.x += (targetX - car.position.x) * 0.1;
-
- // Move road
- road.position.z += 1;
- if(road.position.z > 250) road.position.z = 0;
-
- // Move enemy
- enemy.position.z += 1.5;
-
- if(enemy.position.z > 10){
-   enemy.position.z = -50;
-   enemy.position.x = lanes[Math.floor(Math.random()*3)];
-   score += 10;
+ if(accelerate){
+   speed += 0.002;
+   if(speed > maxSpeed) speed = maxSpeed;
+ } else {
+   speed *= 0.98;
  }
 
- // Collision
- if(
-   Math.abs(enemy.position.z - car.position.z) < 2 &&
-   Math.abs(enemy.position.x - car.position.x) < 1
- ){
-   alert("Game Over! Score: " + score);
-   location.reload();
- }
+ if(moveLeft) angle += 0.03;
+ if(moveRight) angle -= 0.03;
 
- scoreDisplay.innerText = "Score: " + score;
+ car.position.x = Math.cos(angle) * 20;
+ car.position.z = Math.sin(angle) * 20;
+ car.rotation.y = -angle + Math.PI/2;
 
- // Camera follow
- camera.position.x = car.position.x;
+ camera.position.x = car.position.x + Math.cos(angle)*8;
+ camera.position.z = car.position.z + Math.sin(angle)*8;
  camera.lookAt(car.position);
 
  renderer.render(scene,camera);
@@ -139,33 +116,6 @@ function animate(){
 
 animate();
 
-/* CONTROLLER */
-database.ref("rooms/"+room+"/move").on("value", function(snapshot){
- let direction = snapshot.val();
-
- if(direction === "left"){
-   if(currentLane > 0) currentLane--;
- }
- if(direction === "right"){
-   if(currentLane < 2) currentLane++;
- }
-
- targetX = lanes[currentLane];
-});
-
-/* KEYBOARD BACKUP */
-document.addEventListener("keydown", function(e){
- if(e.key === "ArrowLeft"){
-   if(currentLane > 0) currentLane--;
- }
- if(e.key === "ArrowRight"){
-   if(currentLane < 2) currentLane++;
- }
-
- targetX = lanes[currentLane];
-});
-
 </script>
-
 </body>
 </html>

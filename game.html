@@ -87,17 +87,25 @@ function animate(){
  renderer.render(scene,camera);
 }
 
-animate();
+animate(if(moveLeft) car.position.x -= 0.3;
+if(moveRight) car.position.x += 0.3;
+
+/* Boundary limit */
+if(car.position.x < -3) car.position.x = -3;
+if(car.position.x > 3) car.position.x = 3;);
 
 /* CONTROLLER LISTENER */
+let moveLeft = false;
+let moveRight = false;
+
 database.ref("rooms/"+room+"/move").on("value", function(snapshot){
  var direction = snapshot.val();
- if(direction === "left"){
-   car.position.x -= 0.7;
- }
- if(direction === "right"){
-   car.position.x += 0.7;
- }
+
+ moveLeft = false;
+ moveRight = false;
+
+ if(direction === "left") moveLeft = true;
+ if(direction === "right") moveRight = true;
 });
 
 /* KEYBOARD (backup) */

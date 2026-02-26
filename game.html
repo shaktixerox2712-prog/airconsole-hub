@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DesiConsole Racing</title>
+<style>
+body{
+  margin:0;
+  background:black;
+  overflow:hidden;
+}
+
+#game{
+  position:relative;
+  width:400px;
+  height:600px;
+  margin:auto;
+  background:#222;
+  overflow:hidden;
+  border:4px solid #00f7ff;
+}
+
+#player{
+  position:absolute;
+  width:50px;
+  height:100px;
+  background:red;
+  bottom:20px;
+  left:175px;
+}
+
+.enemy{
+  position:absolute;
+  width:50px;
+  height:100px;
+  background:yellow;
+}
+
+#score{
+  color:white;
+  text-align:center;
+  font-size:20px;
+  margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="player"></div>
+</div>
+
+<div id="score">Score: 0</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
+  authDomain: "airconsole-game-1c64b.firebaseapp.com",
+  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
+  projectId: "airconsole-game-1c64b"
+};
+
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+var room = localStorage.getItem("room");
+if(!room){ window.location.href="index.html"; }
+
+var player = document.getElementById("player");
+var game = document.getElementById("game");
+var scoreDisplay = document.getElementById("score");
+
+var playerX = 175;
+var speed = 5;
+var score = 0;
+
+var enemy = document.createElement("div");
+enemy.classList.add("enemy");
+enemy.style.left = Math.floor(Math.random()*350)+"px";
+enemy.style.top = "-120px";
+game.appendChild(enemy);
+
+function gameLoop(){
+  enemy.style.top = enemy.offsetTop + speed + "px";
+
+  if(enemy.offsetTop > 600){
+    enemy.style.top = "-120px";
+    enemy.style.left = Math.floor(Math.random()*350)+"px";
+    score++;
+    scoreDisplay.innerText = "Score: " + score;
+  }
+
+  if(
+    enemy.offsetTop + 100 > 480 &&
+    enemy.offsetLeft < playerX + 50 &&
+    enemy.offsetLeft + 50 > playerX
+  ){
+    alert("Game Over! Score: " + score);
+    location.reload();
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+database.ref("rooms/"+room+"/move").on("value", function(snapshot){
+  var direction = snapshot.val();
+  if(direction === "left" && playerX > 0){
+    playerX -= 20;
+  }
+  if(direction === "right" && playerX < 350){
+    playerX += 20;
+  }
+  player.style.left = playerX + "px";
+});
+</script>
+
+</body>
+</html>

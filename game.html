@@ -1,20 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Multiplayer Racing</title>
+<style>
+body { margin:0; overflow:hidden; background:black; }
+</style>
+
+<!-- THREE JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+</head>
+<body>
+
 <script>
-/* FIREBASE */
+
+/* FIREBASE CONFIG */
 var firebaseConfig = {
   apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
   authDomain: "airconsole-game-1c64b.firebaseapp.com",
   databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
   projectId: "airconsole-game-1c64b"
 };
-
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
+
 var room = localStorage.getItem("room");
-if(!room){ window.location.href="index.html"; }
+if(!room){ alert("Room not found!"); }
 
 /* THREE SETUP */
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 3000);
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 5000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -27,13 +47,13 @@ scene.add(light);
 
 /* ROAD */
 let road = new THREE.Mesh(
- new THREE.PlaneGeometry(20,3000),
+ new THREE.PlaneGeometry(20,4000),
  new THREE.MeshStandardMaterial({color:0x222222})
 );
 road.rotation.x = -Math.PI/2;
 scene.add(road);
 
-/* CAR */
+/* PLAYER CAR */
 let car = new THREE.Mesh(
  new THREE.BoxGeometry(1,0.5,2),
  new THREE.MeshStandardMaterial({color:0xff0000})
@@ -41,18 +61,18 @@ let car = new THREE.Mesh(
 car.position.y = 0.25;
 scene.add(car);
 
-/* ENEMY */
+/* ENEMY CAR */
 let enemy = new THREE.Mesh(
  new THREE.BoxGeometry(1,0.5,2),
  new THREE.MeshStandardMaterial({color:0xffff00})
 );
-enemy.position.set(2,0.25,-300);
+enemy.position.set(2,0.25,-200);
 scene.add(enemy);
 
 /* CAMERA */
 camera.position.set(0,6,12);
 
-/* GAME UI */
+/* UI */
 let speedDiv = document.createElement("div");
 speedDiv.style.position="absolute";
 speedDiv.style.top="10px";
@@ -62,16 +82,6 @@ speedDiv.style.fontFamily="Arial";
 speedDiv.innerHTML="Speed: 0";
 document.body.appendChild(speedDiv);
 
-let countdownDiv = document.createElement("div");
-countdownDiv.style.position="absolute";
-countdownDiv.style.top="40%";
-countdownDiv.style.left="50%";
-countdownDiv.style.transform="translate(-50%,-50%)";
-countdownDiv.style.color="white";
-countdownDiv.style.fontSize="80px";
-countdownDiv.style.fontFamily="Arial";
-document.body.appendChild(countdownDiv);
-
 /* GAME VARIABLES */
 let speed = 0;
 let maxSpeed = 1;
@@ -79,26 +89,8 @@ let acceleration = 0.02;
 let friction = 0.01;
 let steering = 0.08;
 let control = {left:false,right:false,acc:false};
-let gameStarted = false;
 
-/* COUNTDOWN */
-let count = 3;
-countdownDiv.innerText = count;
-
-let countdownInterval = setInterval(()=>{
- count--;
- if(count>0){
-   countdownDiv.innerText = count;
- } else if(count==0){
-   countdownDiv.innerText = "GO!";
- } else{
-   clearInterval(countdownInterval);
-   countdownDiv.style.display="none";
-   gameStarted = true;
- }
-},1000);
-
-/* CONTROL LISTENER */
+/* FIREBASE CONTROL LISTENER */
 database.ref("rooms/"+room+"/control").on("value", function(snapshot){
  let data = snapshot.val();
  if(data) control = data;
@@ -110,43 +102,40 @@ function crash(){
  location.reload();
 }
 
-/* ANIMATE */
+/* GAME LOOP */
 function animate(){
  requestAnimationFrame(animate);
 
- if(gameStarted){
+ if(control.acc) speed += acceleration;
+ else speed -= friction;
 
-   if(control.acc) speed += acceleration;
-   else speed -= friction;
+ if(speed<0) speed=0;
+ if(speed>maxSpeed) speed=maxSpeed;
 
-   if(speed<0) speed=0;
-   if(speed>maxSpeed) speed=maxSpeed;
-
-   if(speed>0){
-     if(control.left) car.position.x -= steering*(speed*10);
-     if(control.right) car.position.x += steering*(speed*10);
-   }
-
-   if(car.position.x<-8) car.position.x=-8;
-   if(car.position.x>8) car.position.x=8;
-
-   car.position.z -= speed;
-
-   enemy.position.z += 0.6;
-   if(enemy.position.z > car.position.z+50){
-     enemy.position.z = car.position.z - 400;
-     enemy.position.x = (Math.random()*6)-3;
-   }
-
-   if(
-     Math.abs(car.position.x - enemy.position.x)<1 &&
-     Math.abs(car.position.z - enemy.position.z)<2
-   ){
-     crash();
-   }
-
-   speedDiv.innerHTML = "Speed: " + Math.floor(speed*100);
+ if(speed>0){
+   if(control.left) car.position.x -= steering*(speed*10);
+   if(control.right) car.position.x += steering*(speed*10);
  }
+
+ if(car.position.x<-8) car.position.x=-8;
+ if(car.position.x>8) car.position.x=8;
+
+ car.position.z -= speed;
+
+ enemy.position.z += 0.6;
+ if(enemy.position.z > car.position.z+50){
+   enemy.position.z = car.position.z - 300;
+   enemy.position.x = (Math.random()*6)-3;
+ }
+
+ if(
+   Math.abs(car.position.x - enemy.position.x)<1 &&
+   Math.abs(car.position.z - enemy.position.z)<2
+ ){
+   crash();
+ }
+
+ speedDiv.innerHTML = "Speed: " + Math.floor(speed*100);
 
  camera.position.x += (car.position.x - camera.position.x)*0.1;
  camera.position.z = car.position.z + 12;
@@ -156,4 +145,8 @@ function animate(){
 }
 
 animate();
+
 </script>
+
+</body>
+</html>

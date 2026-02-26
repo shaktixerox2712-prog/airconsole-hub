@@ -4,7 +4,7 @@
 <title>DesiConsole 3D Racing</title>
 <style>
 body { margin:0; overflow:hidden; background:black; }
-#info {
+#score {
  position:absolute;
  top:10px;
  left:50%;
@@ -17,11 +17,28 @@ body { margin:0; overflow:hidden; background:black; }
 </head>
 <body>
 
-<div id="info">Arrow Keys Se Drive Karo 🚗</div>
+<div id="score">Score: 0</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+/* FIREBASE CONFIG */
+var firebaseConfig = {
+  apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
+  authDomain: "airconsole-game-1c64b.firebaseapp.com",
+  databaseURL: "https://airconsole-game-1c64b-default-rtdb.firebaseio.com",
+  projectId: "airconsole-game-1c64b"
+};
+
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+var room = localStorage.getItem("room");
+if(!room){ window.location.href="index.html"; }
+
+/* THREE JS SETUP */
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
@@ -30,38 +47,41 @@ document.body.appendChild(renderer.domElement);
 
 scene.background = new THREE.Color(0x000000);
 
-// LIGHT
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(0,10,10);
 scene.add(light);
 
-// ROAD
-let roadGeometry = new THREE.PlaneGeometry(10,200);
+/* ROAD */
+let roadGeometry = new THREE.PlaneGeometry(10,500);
 let roadMaterial = new THREE.MeshStandardMaterial({color:0x333333});
 let road = new THREE.Mesh(roadGeometry, roadMaterial);
 road.rotation.x = -Math.PI/2;
 scene.add(road);
 
-// CAR
+/* CAR */
 let carGeometry = new THREE.BoxGeometry(1,0.5,2);
 let carMaterial = new THREE.MeshStandardMaterial({color:0xff0000});
 let car = new THREE.Mesh(carGeometry, carMaterial);
 car.position.y = 0.25;
-car.position.z = 0;
 scene.add(car);
 
 camera.position.set(0,3,5);
-camera.lookAt(car.position);
 
-let speed = 0.2;
+let speed = 0.5;
+let score = 0;
+let scoreDisplay = document.getElementById("score");
 
 function animate(){
  requestAnimationFrame(animate);
 
  road.position.z += speed;
- if(road.position.z > 100) road.position.z = 0;
+ if(road.position.z > 250) road.position.z = 0;
+
+ score += 0.1;
+ scoreDisplay.innerText = "Score: " + Math.floor(score);
 
  camera.position.x = car.position.x;
+ camera.position.z = car.position.z + 5;
  camera.lookAt(car.position);
 
  renderer.render(scene,camera);
@@ -69,14 +89,21 @@ function animate(){
 
 animate();
 
-// CONTROLS
+/* CONTROLLER LISTENER */
+database.ref("rooms/"+room+"/move").on("value", function(snapshot){
+ var direction = snapshot.val();
+ if(direction === "left"){
+   car.position.x -= 0.7;
+ }
+ if(direction === "right"){
+   car.position.x += 0.7;
+ }
+});
+
+/* KEYBOARD (backup) */
 document.addEventListener("keydown", function(e){
- if(e.key === "ArrowLeft"){
-   car.position.x -= 0.5;
- }
- if(e.key === "ArrowRight"){
-   car.position.x += 0.5;
- }
+ if(e.key === "ArrowLeft") car.position.x -= 0.7;
+ if(e.key === "ArrowRight") car.position.x += 0.7;
 });
 </script>
 

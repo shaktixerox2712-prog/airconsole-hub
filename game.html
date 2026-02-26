@@ -25,6 +25,7 @@ body { margin:0; overflow:hidden; background:black; }
 
 <script>
 
+<script>
 /* FIREBASE */
 var firebaseConfig = {
   apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
@@ -35,87 +36,92 @@ var firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
+
 var room = localStorage.getItem("room");
 if(!room){ window.location.href="index.html"; }
 
-/* THREE SETUP */
+/* THREE JS */
 let scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
-
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-/* LIGHT */
+scene.background = new THREE.Color(0x000000);
+
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(0,10,10);
 scene.add(light);
 
-/* TRACK */
-let trackGeometry = new THREE.RingGeometry(15,25,64);
-let trackMaterial = new THREE.MeshStandardMaterial({color:0x333333, side:THREE.DoubleSide});
-let track = new THREE.Mesh(trackGeometry, trackMaterial);
-track.rotation.x = -Math.PI/2;
-scene.add(track);
+/* ROAD */
+let roadGeometry = new THREE.PlaneGeometry(20,1000);
+let roadMaterial = new THREE.MeshStandardMaterial({color:0x222222});
+let road = new THREE.Mesh(roadGeometry, roadMaterial);
+road.rotation.x = -Math.PI/2;
+scene.add(road);
 
-/* PLAYER CAR */
-let carGeo = new THREE.BoxGeometry(1,0.5,2);
-let carMat = new THREE.MeshStandardMaterial({color:0xff0000});
-let car = new THREE.Mesh(carGeo, carMat);
+/* CAR */
+let carGeometry = new THREE.BoxGeometry(1,0.5,2);
+let carMaterial = new THREE.MeshStandardMaterial({color:0xff0000});
+let car = new THREE.Mesh(carGeometry, carMaterial);
 car.position.y = 0.25;
 scene.add(car);
 
-let angle = 0;
+camera.position.set(0,4,8);
+
+/* SPEED SYSTEM */
 let speed = 0;
-let maxSpeed = 0.15;
-let lap = 1;
-let totalLaps = 3;
+let maxSpeed = 0.5;
+let acceleration = 0.01;
+let friction = 0.005;
+let steeringPower = 0.05;
 
-camera.position.set(0,5,10);
+/* CONTROL STATE */
+let control = {left:false, right:false, acc:false};
 
-/* CONTROLLER STATE */
-let moveLeft=false;
-let moveRight=false;
-let accelerate=false;
-
-/* FIREBASE CONTROLLER LISTEN */
-database.ref("rooms/"+room+"/control").on("value", function(snap){
- let data = snap.val();
- if(!data) return;
-
- moveLeft = data.left || false;
- moveRight = data.right || false;
- accelerate = data.acc || false;
+/* FIREBASE CONTROL LISTENER */
+database.ref("rooms/"+room+"/control").on("value", function(snapshot){
+ let data = snapshot.val();
+ if(data){
+   control = data;
+ }
 });
 
-/* GAME LOOP */
+/* ANIMATE LOOP */
 function animate(){
  requestAnimationFrame(animate);
 
- if(accelerate){
-   speed += 0.002;
-   if(speed > maxSpeed) speed = maxSpeed;
+ // Acceleration
+ if(control.acc){
+   speed += acceleration;
  } else {
-   speed *= 0.98;
+   speed -= friction;
  }
 
- if(moveLeft) angle += 0.03;
- if(moveRight) angle -= 0.03;
+ // Clamp speed
+ if(speed < 0) speed = 0;
+ if(speed > maxSpeed) speed = maxSpeed;
 
- car.position.x = Math.cos(angle) * 20;
- car.position.z = Math.sin(angle) * 20;
- car.rotation.y = -angle + Math.PI/2;
+ // Steering (only if moving)
+ if(speed > 0){
+   if(control.left) car.position.x -= steeringPower * (speed*10);
+   if(control.right) car.position.x += steeringPower * (speed*10);
+ }
 
- camera.position.x = car.position.x + Math.cos(angle)*8;
- camera.position.z = car.position.z + Math.sin(angle)*8;
+ // Boundary
+ if(car.position.x < -8) car.position.x = -8;
+ if(car.position.x > 8) car.position.x = 8;
+
+ // Move forward
+ car.position.z -= speed;
+
+ // Camera follow
+ camera.position.x = car.position.x;
+ camera.position.z = car.position.z + 8;
  camera.lookAt(car.position);
 
  renderer.render(scene,camera);
 }
 
 animate();
-
 </script>
-</body>
-</html>

@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>DesiConsole 3D Racing</title>
+<title>DesiConsole 3D Racing - Level 2</title>
 <style>
 body { margin:0; overflow:hidden; background:black; }
-
 #score {
  position:absolute;
  top:10px;
@@ -25,6 +24,7 @@ body { margin:0; overflow:hidden; background:black; }
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+
 /* FIREBASE */
 var firebaseConfig = {
   apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
@@ -41,121 +41,97 @@ if(!room){ window.location.href="index.html"; }
 
 /* THREE SETUP */
 let scene = new THREE.Scene();
-
-let camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth/window.innerHeight,
-  0.1,
-  1000
-);
-
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 scene.background = new THREE.Color(0x000000);
 
-/* LIGHT */
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(0,10,10);
 scene.add(light);
 
 /* ROAD */
-let roadGeometry = new THREE.PlaneGeometry(10,500);
-let roadMaterial = new THREE.MeshStandardMaterial({color:0x333333});
-let road = new THREE.Mesh(roadGeometry, roadMaterial);
+let road = new THREE.Mesh(
+  new THREE.PlaneGeometry(10,500),
+  new THREE.MeshStandardMaterial({color:0x222222})
+);
 road.rotation.x = -Math.PI/2;
 scene.add(road);
 
-/* PLAYER CAR */
-let carGeometry = new THREE.BoxGeometry(1,0.5,2);
-let carMaterial = new THREE.MeshStandardMaterial({color:0xff0000});
-let car = new THREE.Mesh(carGeometry, carMaterial);
+/* LANE LINES */
+for(let i=-200;i<200;i+=20){
+ let line = new THREE.Mesh(
+   new THREE.BoxGeometry(0.1,0.01,5),
+   new THREE.MeshStandardMaterial({color:0xffffff})
+ );
+ line.position.set(0,0.01,i);
+ scene.add(line);
+}
+
+/* CAR */
+let car = new THREE.Mesh(
+ new THREE.BoxGeometry(1,0.5,2),
+ new THREE.MeshStandardMaterial({color:0xff0000})
+);
 car.position.y = 0.25;
 scene.add(car);
 
-/* ENEMY CAR */
-let enemyGeometry = new THREE.BoxGeometry(1,0.5,2);
-let enemyMaterial = new THREE.MeshStandardMaterial({color:0xffff00});
-let enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+/* ENEMY */
+let enemy = new THREE.Mesh(
+ new THREE.BoxGeometry(1,0.5,2),
+ new THREE.MeshStandardMaterial({color:0xffff00})
+);
 enemy.position.y = 0.25;
 enemy.position.z = -50;
-enemy.position.x = (Math.random()*6)-3;
 scene.add(enemy);
 
-/* CAMERA POSITION */
-camera.position.set(0,3,6);
+/* LANES */
+let lanes = [-2, 0, 2];
+let currentLane = 1; // center
+let targetX = lanes[currentLane];
 
-/* GAME VARIABLES */
-let speed = 0.6;
+/* SCORE */
 let score = 0;
-let gameOver = false;
 let scoreDisplay = document.getElementById("score");
 
-let moveLeft = false;
-let moveRight = false;
-
-/* CONTROLLER LISTENER */
-database.ref("rooms/"+room+"/move").on("value", function(snapshot){
- var direction = snapshot.val();
-
- moveLeft = false;
- moveRight = false;
-
- if(direction === "left") moveLeft = true;
- if(direction === "right") moveRight = true;
-});
-
-/* KEYBOARD BACKUP */
-document.addEventListener("keydown", function(e){
- if(e.key === "ArrowLeft") moveLeft = true;
- if(e.key === "ArrowRight") moveRight = true;
-});
-
-document.addEventListener("keyup", function(){
- moveLeft = false;
- moveRight = false;
-});
+/* CAMERA */
+camera.position.set(0,4,6);
 
 /* GAME LOOP */
 function animate(){
  requestAnimationFrame(animate);
 
- if(gameOver) return;
+ // Smooth lane movement
+ car.position.x += (targetX - car.position.x) * 0.1;
 
- /* PLAYER MOVEMENT (SMOOTH) */
- if(moveLeft) car.position.x -= 0.15;
- if(moveRight) car.position.x += 0.15;
+ // Move road
+ road.position.z += 1;
+ if(road.position.z > 250) road.position.z = 0;
 
- /* BOUNDARY */
- if(car.position.x < -3) car.position.x = -3;
- if(car.position.x > 3) car.position.x = 3;
+ // Move enemy
+ enemy.position.z += 1.5;
 
- /* ENEMY MOVE */
- enemy.position.z += speed;
-
- if(enemy.position.z > 5){
+ if(enemy.position.z > 10){
    enemy.position.z = -50;
-   enemy.position.x = (Math.random()*6)-3;
+   enemy.position.x = lanes[Math.floor(Math.random()*3)];
    score += 10;
  }
 
- /* COLLISION */
+ // Collision
  if(
-   Math.abs(car.position.z - enemy.position.z) < 1.5 &&
-   Math.abs(car.position.x - enemy.position.x) < 1
+   Math.abs(enemy.position.z - car.position.z) < 2 &&
+   Math.abs(enemy.position.x - car.position.x) < 1
  ){
-   gameOver = true;
    alert("Game Over! Score: " + score);
    location.reload();
  }
 
- /* SCORE UPDATE */
  scoreDisplay.innerText = "Score: " + score;
 
- /* CAMERA FOLLOW */
+ // Camera follow
  camera.position.x = car.position.x;
- camera.position.z = car.position.z + 6;
  camera.lookAt(car.position);
 
  renderer.render(scene,camera);
@@ -163,12 +139,32 @@ function animate(){
 
 animate();
 
-/* RESPONSIVE */
-window.addEventListener("resize", function(){
- camera.aspect = window.innerWidth/window.innerHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(window.innerWidth, window.innerHeight);
+/* CONTROLLER */
+database.ref("rooms/"+room+"/move").on("value", function(snapshot){
+ let direction = snapshot.val();
+
+ if(direction === "left"){
+   if(currentLane > 0) currentLane--;
+ }
+ if(direction === "right"){
+   if(currentLane < 2) currentLane++;
+ }
+
+ targetX = lanes[currentLane];
 });
+
+/* KEYBOARD BACKUP */
+document.addEventListener("keydown", function(e){
+ if(e.key === "ArrowLeft"){
+   if(currentLane > 0) currentLane--;
+ }
+ if(e.key === "ArrowRight"){
+   if(currentLane < 2) currentLane++;
+ }
+
+ targetX = lanes[currentLane];
+});
+
 </script>
 
 </body>

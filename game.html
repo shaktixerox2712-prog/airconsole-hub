@@ -1,30 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>DesiConsole 3D Racing</title>
-<style>
-body { margin:0; overflow:hidden; background:black; }
-#hud {
- position:absolute;
- top:10px;
- left:50%;
- transform:translateX(-50%);
- color:white;
- font-family:Arial;
- font-size:20px;
-}
-</style>
-</head>
-<body>
-
-<div id="hud">Lap: 1 | Position: 1</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<script>
-
 <script>
 /* FIREBASE */
 var firebaseConfig = {
@@ -36,13 +9,12 @@ var firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
-
 var room = localStorage.getItem("room");
 if(!room){ window.location.href="index.html"; }
 
-/* THREE JS */
+/* THREE SETUP */
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -50,74 +22,120 @@ document.body.appendChild(renderer.domElement);
 scene.background = new THREE.Color(0x000000);
 
 let light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(0,10,10);
+light.position.set(0,20,10);
 scene.add(light);
 
 /* ROAD */
-let roadGeometry = new THREE.PlaneGeometry(20,1000);
-let roadMaterial = new THREE.MeshStandardMaterial({color:0x222222});
-let road = new THREE.Mesh(roadGeometry, roadMaterial);
+let roadGeo = new THREE.PlaneGeometry(20,2000);
+let roadMat = new THREE.MeshStandardMaterial({color:0x222222});
+let road = new THREE.Mesh(roadGeo, roadMat);
 road.rotation.x = -Math.PI/2;
 scene.add(road);
 
-/* CAR */
-let carGeometry = new THREE.BoxGeometry(1,0.5,2);
-let carMaterial = new THREE.MeshStandardMaterial({color:0xff0000});
-let car = new THREE.Mesh(carGeometry, carMaterial);
+/* FINISH LINE */
+let finishGeo = new THREE.PlaneGeometry(20,5);
+let finishMat = new THREE.MeshStandardMaterial({color:0xffffff});
+let finish = new THREE.Mesh(finishGeo, finishMat);
+finish.rotation.x = -Math.PI/2;
+finish.position.z = -500;
+scene.add(finish);
+
+/* PLAYER CAR */
+let carGeo = new THREE.BoxGeometry(1,0.5,2);
+let carMat = new THREE.MeshStandardMaterial({color:0xff0000});
+let car = new THREE.Mesh(carGeo, carMat);
 car.position.y = 0.25;
 scene.add(car);
 
-camera.position.set(0,4,8);
+/* ENEMY CAR */
+let enemyGeo = new THREE.BoxGeometry(1,0.5,2);
+let enemyMat = new THREE.MeshStandardMaterial({color:0xffff00});
+let enemy = new THREE.Mesh(enemyGeo, enemyMat);
+enemy.position.set(2,0.25,-200);
+scene.add(enemy);
 
-/* SPEED SYSTEM */
+/* CAMERA */
+camera.position.set(0,5,10);
+
+/* GAME VARIABLES */
 let speed = 0;
-let maxSpeed = 0.5;
+let maxSpeed = 0.6;
 let acceleration = 0.01;
 let friction = 0.005;
-let steeringPower = 0.05;
+let steering = 0.06;
 
-/* CONTROL STATE */
+let lap = 1;
+let totalLaps = 2;
+let finished = false;
+
 let control = {left:false, right:false, acc:false};
 
-/* FIREBASE CONTROL LISTENER */
+/* CONTROL LISTENER */
 database.ref("rooms/"+room+"/control").on("value", function(snapshot){
  let data = snapshot.val();
- if(data){
-   control = data;
- }
+ if(data) control = data;
 });
 
-/* ANIMATE LOOP */
+/* COLLISION CHECK */
+function checkCollision(a,b){
+ return (
+   Math.abs(a.position.x - b.position.x) < 1 &&
+   Math.abs(a.position.z - b.position.z) < 2
+ );
+}
+
+/* ANIMATE */
 function animate(){
  requestAnimationFrame(animate);
 
- // Acceleration
- if(control.acc){
-   speed += acceleration;
- } else {
-   speed -= friction;
- }
+ if(finished) return;
 
- // Clamp speed
+ /* SPEED SYSTEM */
+ if(control.acc) speed += acceleration;
+ else speed -= friction;
+
  if(speed < 0) speed = 0;
  if(speed > maxSpeed) speed = maxSpeed;
 
- // Steering (only if moving)
+ /* STEERING */
  if(speed > 0){
-   if(control.left) car.position.x -= steeringPower * (speed*10);
-   if(control.right) car.position.x += steeringPower * (speed*10);
+   if(control.left) car.position.x -= steering * (speed*10);
+   if(control.right) car.position.x += steering * (speed*10);
  }
 
- // Boundary
  if(car.position.x < -8) car.position.x = -8;
  if(car.position.x > 8) car.position.x = 8;
 
- // Move forward
  car.position.z -= speed;
 
- // Camera follow
+ /* ENEMY MOVE */
+ enemy.position.z += 0.3;
+ if(enemy.position.z > car.position.z + 50){
+   enemy.position.z = car.position.z - 300;
+   enemy.position.x = (Math.random()*6)-3;
+ }
+
+ /* COLLISION */
+ if(checkCollision(car,enemy)){
+   alert("💥 Crash! Game Over");
+   location.reload();
+ }
+
+ /* LAP CHECK */
+ if(car.position.z < -500){
+   lap++;
+   car.position.z = 0;
+
+   if(lap > totalLaps){
+     finished = true;
+     alert("🏁 You Win!");
+     location.reload();
+   }
+ }
+
+ /* CAMERA FOLLOW */
  camera.position.x = car.position.x;
- camera.position.z = car.position.z + 8;
+ camera.position.z = car.position.z + 10;
  camera.lookAt(car.position);
 
  renderer.render(scene,camera);

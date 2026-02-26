@@ -4,6 +4,7 @@
 <title>DesiConsole 3D Racing</title>
 <style>
 body { margin:0; overflow:hidden; background:black; }
+
 #score {
  position:absolute;
  top:10px;
@@ -11,7 +12,7 @@ body { margin:0; overflow:hidden; background:black; }
  transform:translateX(-50%);
  color:white;
  font-family:Arial;
- font-size:20px;
+ font-size:22px;
 }
 </style>
 </head>
@@ -24,7 +25,7 @@ body { margin:0; overflow:hidden; background:black; }
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* FIREBASE CONFIG */
+/* FIREBASE */
 var firebaseConfig = {
   apiKey: "AIzaSyAOCz7nPegv2Rmf1FlpgZJQVUflwC-FFP8",
   authDomain: "airconsole-game-1c64b.firebaseapp.com",
@@ -38,15 +39,23 @@ var database = firebase.database();
 var room = localStorage.getItem("room");
 if(!room){ window.location.href="index.html"; }
 
-/* THREE JS SETUP */
+/* THREE SETUP */
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+let camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth/window.innerHeight,
+  0.1,
+  1000
+);
+
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 scene.background = new THREE.Color(0x000000);
 
+/* LIGHT */
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(0,10,10);
 scene.add(light);
@@ -58,46 +67,35 @@ let road = new THREE.Mesh(roadGeometry, roadMaterial);
 road.rotation.x = -Math.PI/2;
 scene.add(road);
 
-/* CAR */
+/* PLAYER CAR */
 let carGeometry = new THREE.BoxGeometry(1,0.5,2);
 let carMaterial = new THREE.MeshStandardMaterial({color:0xff0000});
 let car = new THREE.Mesh(carGeometry, carMaterial);
 car.position.y = 0.25;
 scene.add(car);
 
-camera.position.set(0,3,5);
+/* ENEMY CAR */
+let enemyGeometry = new THREE.BoxGeometry(1,0.5,2);
+let enemyMaterial = new THREE.MeshStandardMaterial({color:0xffff00});
+let enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+enemy.position.y = 0.25;
+enemy.position.z = -50;
+enemy.position.x = (Math.random()*6)-3;
+scene.add(enemy);
 
-let speed = 0.5;
+/* CAMERA POSITION */
+camera.position.set(0,3,6);
+
+/* GAME VARIABLES */
+let speed = 0.6;
 let score = 0;
+let gameOver = false;
 let scoreDisplay = document.getElementById("score");
 
-function animate(){
- requestAnimationFrame(animate);
-
- road.position.z += speed;
- if(road.position.z > 250) road.position.z = 0;
-
- score += 0.1;
- scoreDisplay.innerText = "Score: " + Math.floor(score);
-
- camera.position.x = car.position.x;
- camera.position.z = car.position.z + 5;
- camera.lookAt(car.position);
-
- renderer.render(scene,camera);
-}
-
-animate(if(moveLeft) car.position.x -= 0.3;
-if(moveRight) car.position.x += 0.3;
-
-/* Boundary limit */
-if(car.position.x < -3) car.position.x = -3;
-if(car.position.x > 3) car.position.x = 3;);
-
-/* CONTROLLER LISTENER */
 let moveLeft = false;
 let moveRight = false;
 
+/* CONTROLLER LISTENER */
 database.ref("rooms/"+room+"/move").on("value", function(snapshot){
  var direction = snapshot.val();
 
@@ -108,10 +106,68 @@ database.ref("rooms/"+room+"/move").on("value", function(snapshot){
  if(direction === "right") moveRight = true;
 });
 
-/* KEYBOARD (backup) */
+/* KEYBOARD BACKUP */
 document.addEventListener("keydown", function(e){
- if(e.key === "ArrowLeft") car.position.x -= 0.7;
- if(e.key === "ArrowRight") car.position.x += 0.7;
+ if(e.key === "ArrowLeft") moveLeft = true;
+ if(e.key === "ArrowRight") moveRight = true;
+});
+
+document.addEventListener("keyup", function(){
+ moveLeft = false;
+ moveRight = false;
+});
+
+/* GAME LOOP */
+function animate(){
+ requestAnimationFrame(animate);
+
+ if(gameOver) return;
+
+ /* PLAYER MOVEMENT (SMOOTH) */
+ if(moveLeft) car.position.x -= 0.15;
+ if(moveRight) car.position.x += 0.15;
+
+ /* BOUNDARY */
+ if(car.position.x < -3) car.position.x = -3;
+ if(car.position.x > 3) car.position.x = 3;
+
+ /* ENEMY MOVE */
+ enemy.position.z += speed;
+
+ if(enemy.position.z > 5){
+   enemy.position.z = -50;
+   enemy.position.x = (Math.random()*6)-3;
+   score += 10;
+ }
+
+ /* COLLISION */
+ if(
+   Math.abs(car.position.z - enemy.position.z) < 1.5 &&
+   Math.abs(car.position.x - enemy.position.x) < 1
+ ){
+   gameOver = true;
+   alert("Game Over! Score: " + score);
+   location.reload();
+ }
+
+ /* SCORE UPDATE */
+ scoreDisplay.innerText = "Score: " + score;
+
+ /* CAMERA FOLLOW */
+ camera.position.x = car.position.x;
+ camera.position.z = car.position.z + 6;
+ camera.lookAt(car.position);
+
+ renderer.render(scene,camera);
+}
+
+animate();
+
+/* RESPONSIVE */
+window.addEventListener("resize", function(){
+ camera.aspect = window.innerWidth/window.innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
 
